@@ -9,14 +9,56 @@ contract Chip is ERC20{
     uint256 public rate;
     address public owner;
     address casino;
+    mapping(address => uint256) balances;
+    mapping(address => mapping (address => uint256)) allowed;
+    uint256 totalSupply_ = 10 ether;
 
     event Buy(address user, uint256 chipsCount, uint256 time);
-    event withdraw(address user, uint256 etherAmount, uint256 time);
+    event Withdraw(address user, uint256 etherAmount, uint256 time);
+    event Allowance(address user, address delegate);
+
 
     constructor(uint256 _rate) ERC20("Chip", "CHP") {
         owner = msg.sender;
         chest = 0;
         rate = _rate;
+        balances[msg.sender] = totalSupply_;
+    }
+
+    function totalSupply() public override view returns (uint256) {
+        return totalSupply_;
+    }
+
+    function balanceOf(address tokenOwner) public override view returns (uint256) {
+        return balances[tokenOwner];
+    }
+
+    function transfer(address receiver, uint256 numTokens) public override returns (bool) {
+        require(numTokens <= balances[msg.sender]);
+        balances[msg.sender] = balances[msg.sender]-numTokens;
+        balances[receiver] = balances[receiver]+numTokens;
+        emit Transfer(msg.sender, receiver, numTokens);        
+        return true;
+    }
+
+    function approve(address delegate, uint256 numTokens) public override returns (bool) {
+        allowed[msg.sender][delegate] = numTokens;
+        emit Approval(msg.sender, delegate, numTokens);
+        return true;
+    }
+
+    function allowance(address _owner, address delegate) public override view returns (uint) {
+        return allowed[_owner][delegate];
+    }
+
+    function transferFrom(address _owner, address buyer, uint256 numTokens) public override returns (bool) {
+        require(numTokens <= balances[_owner]);
+        require(numTokens <= allowed[_owner][msg.sender]);
+        balances[_owner] = balances[_owner]-numTokens;
+        allowed[_owner][msg.sender] = allowed[_owner][msg.sender]-numTokens;
+        balances[buyer] = balances[buyer]+numTokens;
+        emit Transfer(_owner, buyer, numTokens);
+        return true;
     }
 
     modifier onlyOwner() {
@@ -41,7 +83,7 @@ contract Chip is ERC20{
         ethAmount = chipsAmount / rate * 80 / 100;
         chest += ethAmount / 4;
         payable(msg.sender).transfer(ethAmount);
-        emit withdraw(msg.sender, chipsAmount, block.timestamp);
+        emit Withdraw(msg.sender, chipsAmount, block.timestamp);
         _burn(msg.sender, chipsAmount);
     }
 }
