@@ -10,14 +10,18 @@ contract Casino {
     uint256 public profit;
     address[] public blackList;
     address public owner;
+    
+    event fill(address user, uint256 chipsCount, uint256 time);
+    event withdraw(address user, uint256 etherAmount, uint256 time);
 
-    constructor() {
+    constructor(){
         owner = msg.sender;
         minVal = 1000000000000000000;
         maxVal = 3000000000000000000;
         Cap = 10000000000000000000;
         profit = 0;
         payments = 0;
+    
     }  
 
     modifier onlyOwner() {
@@ -62,11 +66,13 @@ contract Casino {
             payments = 0;
             clearAddresList();
         }
+            emit fill(msg.sender, (payments/100)*80, block.timestamp);
     }
 
     function withdrawAll() public onlyOwner {
         address payable Owner = payable(owner);
         Owner.transfer(profit);
+        emit withdraw(Owner, profit, block.timestamp);
         profit = 0;
     }
 }
