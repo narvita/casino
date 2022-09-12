@@ -9,56 +9,23 @@ contract Chip is ERC20{
     uint256 public rate;
     address public owner;
     address casino;
-    mapping(address => uint256) balances;
-    mapping(address => mapping (address => uint256)) allowed;
-    uint256 totalSupply_ = 10 ether;
+    uint public _totalSupply;
+    mapping(address => uint256) private _balances;
+    mapping(address => mapping(address => uint256)) private _allowances;
 
     event Buy(address user, uint256 chipsCount, uint256 time);
     event Withdraw(address user, uint256 etherAmount, uint256 time);
-    event Allowance(address user, address delegate);
-
-
+    event Mint(address user, uint256 amount);
+    event TransferFrom(address userr, address reciver, uint256 amount);
+    event Burn( address user, uint256 amount);
+    event Approve(address sender, address spender, uint256 amount);
+     
+    
     constructor(uint256 _rate) ERC20("Chip", "CHP") {
         owner = msg.sender;
         chest = 0;
         rate = _rate;
-        balances[msg.sender] = totalSupply_;
-    }
-
-    function totalSupply() public override view returns (uint256) {
-        return totalSupply_;
-    }
-
-    function balanceOf(address tokenOwner) public override view returns (uint256) {
-        return balances[tokenOwner];
-    }
-
-    function transfer(address receiver, uint256 numTokens) public override returns (bool) {
-        require(numTokens <= balances[msg.sender]);
-        balances[msg.sender] = balances[msg.sender]-numTokens;
-        balances[receiver] = balances[receiver]+numTokens;
-        emit Transfer(msg.sender, receiver, numTokens);        
-        return true;
-    }
-
-    function approve(address delegate, uint256 numTokens) public override returns (bool) {
-        allowed[msg.sender][delegate] = numTokens;
-        emit Approval(msg.sender, delegate, numTokens);
-        return true;
-    }
-
-    function allowance(address _owner, address delegate) public override view returns (uint) {
-        return allowed[_owner][delegate];
-    }
-
-    function transferFrom(address _owner, address buyer, uint256 numTokens) public override returns (bool) {
-        require(numTokens <= balances[_owner]);
-        require(numTokens <= allowed[_owner][msg.sender]);
-        balances[_owner] = balances[_owner]-numTokens;
-        allowed[_owner][msg.sender] = allowed[_owner][msg.sender]-numTokens;
-        balances[buyer] = balances[buyer]+numTokens;
-        emit Transfer(_owner, buyer, numTokens);
-        return true;
+        _balances[msg.sender] = _totalSupply;
     }
 
     modifier onlyOwner() {
@@ -76,7 +43,7 @@ contract Chip is ERC20{
          emit Buy(msg.sender, msg.value * rate, block.timestamp);
     }
 
-   function withdrawAll(uint256 chipsAmount) public {
+    function withdrawAll(uint256 chipsAmount) public {
         uint256 balance = balanceOf(msg.sender);
         uint256 ethAmount;
         require(chipsAmount < balance, "suffition balance");
@@ -85,5 +52,47 @@ contract Chip is ERC20{
         payable(msg.sender).transfer(ethAmount);
         emit Withdraw(msg.sender, chipsAmount, block.timestamp);
         _burn(msg.sender, chipsAmount);
+    }
+
+    function _mint(address account, uint256 amount) internal virtual override {
+        emit Mint(account, amount);
+        _afterTokenTransfer(address(0), account, amount);
+    }
+    
+    function totalSupply() public view override  returns (uint) {
+        return _totalSupply;
+    }
+
+    function balanceOf(address account) public view virtual override returns (uint256) {
+        return _balances[account];
+    }
+
+    function transfer(address to, uint256 amount) public override returns (bool) {
+        emit Transfer(msg.sender, to, amount);
+        _transfer(msg.sender, to, amount);
+        return true;
+    }
+
+    function allowance(address  _owner, address spender) public view virtual override returns (uint256) {
+        return _allowances[ _owner][spender];
+    }
+   
+    function approve(address spender, uint256 amount) public override virtual returns (bool) {
+        address _owner = _msgSender();
+        emit Approve(msg.sender, spender, amount);
+        _approve(_owner, spender, amount);
+        return true;
+    }
+    function transferFrom(address from, address to, uint256 amount) public virtual override returns (bool) {
+        address spender = _msgSender();
+        emit TransferFrom(from, to, amount);
+        _spendAllowance(from, spender, amount);
+        _transfer(from, to, amount);
+        return true;
+    }
+
+    function burn(address account, uint256 id) public virtual {
+        emit Burn(account, id);
+        _burn(owner, id);
     }
 }
