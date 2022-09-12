@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.7;
 
-contract Chip  {
+contract Casino {
     uint256 public minVal;
     uint256 public maxVal;
     uint256 public Cap;
